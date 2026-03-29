@@ -151,23 +151,6 @@ MongoDB runs on → mongodb://localhost:27017
 
 ---
 
-## 👥 Team
-
-| Name | Role |
-|------|------|
-| Student 1 | Frontend Development |
-| Student 2 | Backend Development |
-| Student 3 | Machine Learning |
-| Student 4 | Database & Integration |
-
----
-
-## 📄 License
-
-This project is developed as part of a BTech final year project.
-
----
-
 ## 🔮 Future Enhancements
 
 - LSTM deep learning model for better accuracy
