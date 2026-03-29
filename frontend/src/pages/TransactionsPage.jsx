@@ -1,0 +1,31 @@
+import React, { useState, useEffect } from 'react';
+import { transactionAPI } from '../services/api';
+import { toast } from 'react-toastify';
+const CATS = ['food','transport','entertainment','shopping','bills','rent','health','education','salary','freelance','investment','other'];
+const TransactionsPage = () => {
+  const [txs, setTxs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [filters, setFilters] = useState({transaction_type:'',category:'',search:''});
+  const [form, setForm] = useState({amount:'',description:'',transaction_type:'expense',category:'other',date:new Date().toISOString().split('T')[0],notes:''});
+  useEffect(() => { load(); }, [filters]);
+  const load = async () => { try { const p = {}; if(filters.transaction_type) p.transaction_type=filters.transaction_type; if(filters.category) p.category=filters.category; if(filters.search) p.search=filters.search; const r = await transactionAPI.getAll(p); setTxs(r.data); } catch{toast.error('Failed');} finally{setLoading(false);} };
+  const submit = async (e) => { e.preventDefault(); try { const d = {...form,amount:parseFloat(form.amount),date:new Date(form.date).toISOString()}; if(editId){await transactionAPI.update(editId,d);toast.success('Updated!');}else{await transactionAPI.create(d);toast.success('Added!');} reset(); load(); } catch{toast.error('Failed');} };
+  const del = async (id) => { if(window.confirm('Delete?')){ try{await transactionAPI.delete(id);toast.success('Deleted');load();}catch{toast.error('Failed');}} };
+  const reset = () => { setForm({amount:'',description:'',transaction_type:'expense',category:'other',date:new Date().toISOString().split('T')[0],notes:''}); setEditId(null); setShowForm(false); };
+  const s = {padding:'12px 16px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:'#fff',fontSize:14,outline:'none',width:'100%'};
+  return <div style={{padding:24,maxWidth:1200,margin:'0 auto'}}>
+    <div style={{display:'flex',justifyContent:'space-between',marginBottom:32}}><h1 style={{fontSize:28,fontWeight:'bold'}}>Transactions</h1><button onClick={()=>setShowForm(!showForm)} className='gradient-bg' style={{padding:'12px 24px',border:'none',borderRadius:12,color:'#fff',fontWeight:600,cursor:'pointer'}}>{showForm?'Close':'+Add'}</button></div>
+    {showForm&&<div className='glass' style={{padding:24,marginBottom:32}}><form onSubmit={submit} style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16}}>
+      <div><label style={{fontSize:12,color:'#9ca3af'}}>Amount</label><input type='number' step='0.01' value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} style={s} required/></div>
+      <div><label style={{fontSize:12,color:'#9ca3af'}}>Description</label><input type='text' value={form.description} onChange={e=>setForm({...form,description:e.target.value})} style={s} required/></div>
+      <div><label style={{fontSize:12,color:'#9ca3af'}}>Type</label><select value={form.transaction_type} onChange={e=>setForm({...form,transaction_type:e.target.value})} style={s}><option value='expense'>Expense</option><option value='income'>Income</option></select></div>
+      <div><label style={{fontSize:12,color:'#9ca3af'}}>Category</label><select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={s}>{CATS.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:'#9ca3af'}}>Date</label><input type='date' value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={s}/></div>
+      <div style={{gridColumn:'1/-1'}}><button type='submit' className='gradient-bg' style={{padding:'12px 32px',border:'none',borderRadius:12,color:'#fff',fontWeight:600,cursor:'pointer'}}>{editId?'Update':'Add'}</button></div>
+    </form></div>}
+    <div className='glass' style={{padding:16,marginBottom:24,display:'flex',gap:16,flexWrap:'wrap'}}><input placeholder='Search...' value={filters.search} onChange={e=>setFilters({...filters,search:e.target.value})} style={{...s,flex:1,minWidth:200}}/><select value={filters.transaction_type} onChange={e=>setFilters({...filters,transaction_type:e.target.value})} style={{...s,width:'auto'}}><option value=''>All</option><option value='income'>Income</option><option value='expense'>Expense</option></select></div>
+    <div style={{display:'flex',flexDirection:'column',gap:12}}>{loading?<p style={{textAlign:'center',padding:48,color:'#6b7280'}}>Loading...</p>:txs.length===0?<div className='glass' style={{textAlign:'center',padding:48}}><p style={{color:'#6b7280'}}>No transactions</p></div>:txs.map(tx=><div key={tx.id} className='glass card-hover' style={{padding:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><p style={{fontWeight:600}}>{tx.description}</p><div style={{display:'flex',gap:8,marginTop:4}}><span style={{fontSize:11,padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:99}}>{tx.category}</span>{tx.ai_category&&tx.ai_category!==tx.category&&<span style={{fontSize:11,padding:'2px 8px',background:'rgba(139,92,246,0.2)',color:'#c4b5fd',borderRadius:99}}>AI:{tx.ai_category}</span>}<span style={{fontSize:11,color:'#6b7280'}}>{new Date(tx.date).toLocaleDateString()}</span></div></div><div style={{display:'flex',alignItems:'center',gap:16}}><p style={{fontSize:18,fontWeight:'bold',color:tx.transaction_type==='income'?'#22c55e':'#ef4444'}}>{tx.transaction_type==='income'?'+':'-'}</p><button onClick={()=>{setForm({amount:tx.amount,description:tx.description,transaction_type:tx.transaction_type,category:tx.category,date:new Date(tx.date).toISOString().split('T')[0],notes:''});setEditId(tx.id);setShowForm(true);}} style={{padding:8,background:'rgba(59,130,246,0.2)',border:'none',borderRadius:8,cursor:'pointer',color:'#60a5fa'}}>Edit</button><button onClick={()=>del(tx.id)} style={{padding:8,background:'rgba(239,68,68,0.2)',border:'none',borderRadius:8,cursor:'pointer',color:'#f87171'}}>Del</button></div></div>)}</div></div>;
+};
+export default TransactionsPage;
